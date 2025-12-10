@@ -9,7 +9,6 @@ import secrets
 import string
 
 #Constants
-
 BASE_PATH = Path(__file__).parent
 CREDENTIAL_PATH = BASE_PATH/"credentials.json"
 CONFIG_FILE = BASE_PATH/"config.ini"
@@ -42,7 +41,6 @@ def getNewPassword():
     return password
 
 # dataclasses
-
 @dataclass
 class Payload:
     method: str
@@ -92,11 +90,15 @@ class routerConnection:
             raise ValueError("Token not received from router")
         
         HEADERS = {
-        "Cookie": f"cSupport=1; sysauth={self.sysauth}"}
+        "Cookie": f"cSupport=1; sysauth={self.sysauth}"
+        }
         
         if (if_logged_in):
             print("Allready Logged In...")
-            params={"authHeader":f"Bearer {self.token}","loggedId":loggedId}
+            params={
+                "authHeader":f"Bearer {self.token}",
+                "loggedId":loggedId
+                }
         else:
             params={"authHeader":f"Bearer {self.token}"}
         post_login_payload = Payload(
@@ -118,7 +120,8 @@ class routerConnection:
                 
     def logout(self):
         HEADERS = {
-            "Cookie": f"cSupport=1; sysauth={self.sysauth}"}
+            "Cookie": f"cSupport=1; sysauth={self.sysauth}"
+            }
 
         logout_payload = Payload(
             method = "logout"
@@ -206,13 +209,18 @@ def main():
     connection.changePassword(newpass)
     # connection.capture_packet(interface="any",size=5)
     # pprint(connection.getInfo("getLanClients"))
+    # pprint(connection.getInfo("getMemoryUtilisation"))
+    # pprint(connection.getInfo("getSystemStatus"))
+    # pprint(connection.getInfo("getStorageDevices"))
     # pprint(connection.getInfo("getCpuUtilisation"))
     # pprint(connection.getInfo("getApplicationsStatus"))
     # pprint(connection.getInfo("getSystemInformation"))
     # pprint(connection.getInfo("getApplicationsStatus"))
     # pprint(connection.getInfo("getSystemDateTime"))
     # pprint(connection.getInfo("getWirelessConfiguration"))
-    # pprint(connection.getInfo("getLanClients"))
+    # pprint(connection.getInfo("getWanStatus"))
+    # pprint(connection.getInfo("getLanStatus",params={"wanType":""}))
+    
     print("Logging Out...")
     connection.logout()
 

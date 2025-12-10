@@ -86,8 +86,15 @@ python main.py
 ```python
 getLanClients
 getCpuUtilisation
+getMemoryUtilisation
 getSystemInformation
+getSystemStatus
+getSystemDateTime
+getStorageDevices
+getApplicationsStatus
 getWirelessConfiguration
+getWanStatus
+getLanStatus
 ```
 
 ---
