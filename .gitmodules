@@ -1,0 +1,3 @@
+[submodule "wifi-pass-change-notifier"]
+	path = wifi-pass-change-notifier
+	url = https://github.com/Susil1/wifi-pass-change-notifier.git
