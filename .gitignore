@@ -1,0 +1,13 @@
+# Capture files
+*.pcap
+
+# Sensitive config files
+config.ini
+credentials.json
+newpass.txt
+
+# Test / local scripts
+test.py
+
+#folder
+wifi-pass-change-notifier/
