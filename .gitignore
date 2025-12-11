@@ -1,6 +1,7 @@
 # Capture files
 *.pcap
 
+*.vscode
 # Sensitive config files
 config.ini
 credentials.json
