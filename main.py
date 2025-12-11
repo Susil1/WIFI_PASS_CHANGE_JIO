@@ -190,7 +190,7 @@ class routerConnection:
         print("Packet Capture Started.")
         input("Press Enter To Stop Capturing Packets...")
         self.getInfo("stopCapturePackets")
-        contents=self.getInfo("downloadCapturePackets",params={"fileDownload": "yes"})
+        contents=self.getInfo("downloadCapturePactets",params={"fileDownload": "yes"})
         with open(file_name, "wb") as f:
             f.write(contents)
         print(f"Packet capture saved as {file_name}")
@@ -207,7 +207,7 @@ def main():
         print("Logged in successfully.")
     newpass= getNewPassword()
     # connection.changePassword(newpass)
-    # connection.capture_packet(interface="any",size=5)
+    connection.capture_packet(interface="any",size=5)
     # pprint(connection.getInfo("getLanClients"))
     # pprint(connection.getInfo("getMemoryUtilisation"))
     # pprint(connection.getInfo("getSystemStatus"))
