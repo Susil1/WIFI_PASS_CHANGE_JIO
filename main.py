@@ -23,7 +23,7 @@ URL = f"https://{IP_ADDRESS}/WCGI"
 # Disable the warning
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-#Inintialise the session
+#Initialise the session
 SESSION = requests.Session()
 
 
@@ -94,7 +94,7 @@ class routerConnection:
         }
         
         if (if_logged_in):
-            print("Allready Logged In...")
+            print("Already Logged In...")
             params={
                 "authHeader":f"Bearer {self.token}",
                 "loggedId":loggedId
@@ -184,13 +184,13 @@ class routerConnection:
                     file.write(newpass)
                 print(f"New Password: {newpass}")
         else:
-            raise ValueError("Type Missmatch")
+            raise ValueError("Type Mismatch")
     def capture_packet(self,interface,size,file_name="capture.pcap"):
         self.getInfo("startCapturePackets",params={"interface":interface,"size":size})
         print("Packet Capture Started.")
         input("Press Enter To Stop Capturing Packets...")
         self.getInfo("stopCapturePackets")
-        contents=self.getInfo("downloadCapturePactets",params={"fileDownload": "yes"})
+        contents=self.getInfo("downloadCapturePackets",params={"fileDownload": "yes"})
         with open(file_name, "wb") as f:
             f.write(contents)
         print(f"Packet capture saved as {file_name}")
@@ -204,9 +204,9 @@ def main():
     connection=routerConnection(login_data)
     status=connection.initialise_connection()
     if (status=="OK"):
-        print("Logged in succsesfully.")
+        print("Logged in successfully.")
     newpass= getNewPassword()
-    connection.changePassword(newpass)
+    # connection.changePassword(newpass)
     # connection.capture_packet(interface="any",size=5)
     # pprint(connection.getInfo("getLanClients"))
     # pprint(connection.getInfo("getMemoryUtilisation"))
