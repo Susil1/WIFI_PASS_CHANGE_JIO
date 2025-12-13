@@ -113,6 +113,16 @@ class routerConnection:
             verify=False,  # router uses self-signed cert
             timeout=10
         )
+        if (post_login_response.json()["code"] == "ERR_POSTLOGIN_FACTORY_RESET"):
+            default_pass = self.login_data["password"]
+            params = {
+                "adminPassword": default_pass,
+                "guestPassword": default_pass,
+                "confirmAdminPassword": default_pass,
+                "confirmGuestPassword": default_pass
+                }
+            self.getInfo("setFactoryReset",params=params)
+            return self.initialise_connection()
         if post_login_response.status_code != 200:
             raise ConnectionError("Login request failed")
         
@@ -205,9 +215,9 @@ def main():
     status=connection.initialise_connection()
     if (status=="OK"):
         print("Logged in successfully.")
-    newpass= getNewPassword()
+    # newpass= getNewPassword()
     # connection.changePassword(newpass)
-    connection.capture_packet(interface="any",size=5)
+    # connection.capture_packet(interface="any",size=5)
     # pprint(connection.getInfo("getLanClients"))
     # pprint(connection.getInfo("getMemoryUtilisation"))
     # pprint(connection.getInfo("getSystemStatus"))
