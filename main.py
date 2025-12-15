@@ -229,6 +229,7 @@ def main():
     # pprint(connection.getInfo("getSystemDateTime"))
     # pprint(connection.getInfo("getWirelessConfiguration"))
     # pprint(connection.getInfo("getWanStatus"))
+    # pprint(connection.getInfo("setReboot"))
     # pprint(connection.getInfo("getLanStatus",params={"wanType":""}))
     
     print("Logging Out...")
