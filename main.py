@@ -58,9 +58,9 @@ class Payload:
 class routerConnection:
     def __init__(self,login_data):
         self.login_data = login_data
-        self.is_loggedIn = False
+        self.__is_loggedIn = False
     def raiseForLogin(self):
-        if (not self.is_loggedIn):
+        if (not self.__is_loggedIn):
             raise Exception(f"You Are Not Logged In!")
     def request(self,method:str,params={}):
         HEADERS = {"Cookie": f"cSupport=1;"}
@@ -79,7 +79,7 @@ class routerConnection:
         response.raise_for_status()
         return response.json()
 
-    def initialise_connection(self,params=None):
+    def initialise_connection(self,params=None,times=0):
         HEADERS = {"Cookie": f"cSupport=1;"}
         if not params:
             login_payload = Payload(
@@ -104,13 +104,15 @@ class routerConnection:
         result = login_response.json()
         if (result["code"] == "ERR_LOGIN_ACCOUNT_LOCKED"):
             raise Exception("Too Many Wrong Attempts")
+        if (result["code"]=="ERR_LOGIN_CREDENTIALS_FAIL" and times>=1):
+            raise Exception("Invalid Credentials!")
         if (result["code"]=="ERR_LOGIN_CREDENTIALS_FAIL"):
             default_login_data = {
                 "username": "admin",
                 "password": "Jiocentrum"
             }
             print("Entering default credentials...")
-            return self.initialise_connection(params=default_login_data)
+            return self.initialise_connection(params=default_login_data,times=times+1)
             
         if "results" not in result:
             raise ValueError("Unexpected login response")
@@ -160,7 +162,7 @@ class routerConnection:
             return self.initialise_connection()
         if post_login_response.status_code != 200:
             raise ConnectionError("Login request failed")
-        self.is_loggedIn=True
+        self.__is_loggedIn=True
         return post_login_response.json().get("status","NOT_OK")
                 
     def logout(self):
@@ -234,6 +236,33 @@ class routerConnection:
                 print(f"New Password: {newpass}")
         else:
             raise ValueError("Type Mismatch")
+    def change_admin_password(self):
+        self.raiseForLogin()
+        password = input("Enter New Password for ADMIN: ")
+        users = self.getInfo("getUsers")
+        if (isinstance(users,dict) and users["results"]):
+            print(f"Changing Admin Password to '{password}'")
+            result = users["results"]
+            admin = result[0] if result[0]["username"]=="admin" else result[1]
+            recordId = admin["recordId"]
+            userType = admin["userType"]
+            params = {
+                "password":password,
+                "recordId":recordId,
+                "userType":userType
+            }
+            result = self.getInfo("changeUserPassword",params=params)
+            if (isinstance(result,dict) and result["status"] == "ERROR"):
+                print("Enter A Valid Password!")
+                return self.change_admin_password()
+            with open(CREDENTIAL_PATH,"w") as json_file:
+                data = {
+                    "username": "admin",
+                    "password": password
+                }
+                json.dump(data,json_file)
+            
+        
     def capture_packet(self,interface,size,file_name="capture.pcap"):
         self.raiseForLogin()
         self.getInfo("startCapturePackets",params={"interface":interface,"size":size})
@@ -256,6 +285,7 @@ def main():
     status=connection.initialise_connection()
     if (status=="OK"):
         print("Logged in successfully.")
+    # connection.change_admin_password()
     # newpass= getNewPassword()
     # connection.changePassword(newpass)
     # connection.capture_packet(interface="any",size=5)
