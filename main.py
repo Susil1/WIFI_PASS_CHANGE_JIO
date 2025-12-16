@@ -57,7 +57,11 @@ class Payload:
 
 class routerConnection:
     def __init__(self,login_data):
-        self.login_data=login_data
+        self.login_data = login_data
+        self.is_loggedIn = False
+    def raiseForLogin(self):
+        if (not self.is_loggedIn):
+            raise Exception(f"You Are Not Logged In!")
     def request(self,method:str,params={}):
         HEADERS = {"Cookie": f"cSupport=1;"}
 
@@ -156,10 +160,12 @@ class routerConnection:
             return self.initialise_connection()
         if post_login_response.status_code != 200:
             raise ConnectionError("Login request failed")
-        
+        self.is_loggedIn=True
         return post_login_response.json().get("status","NOT_OK")
                 
     def logout(self):
+        self.raiseForLogin()
+        print("Logging Out...")
         HEADERS = {
             "Cookie": f"cSupport=1; sysauth={self.sysauth}"
             }
@@ -178,6 +184,7 @@ class routerConnection:
         return logout_response.json().get("status","NOT_OK")
     
     def getInfo(self,method=None,params=None,info_payload=None):
+        self.raiseForLogin()
         HEADERS = {
             "Cookie": f"cSupport=1; sysauth={self.sysauth}",
             "Authorization": f"Bearer {self.token}",
@@ -200,6 +207,7 @@ class routerConnection:
         else:
             return info_response.json()
     def changePassword(self,newpass):
+        self.raiseForLogin()
         wireless_config=self.getInfo("getWirelessConfiguration")
         if (isinstance(wireless_config,dict) and wireless_config["status"] != "OK"):
             raise ConnectionError("Error Getting WirelessConfiguration!")
@@ -227,6 +235,7 @@ class routerConnection:
         else:
             raise ValueError("Type Mismatch")
     def capture_packet(self,interface,size,file_name="capture.pcap"):
+        self.raiseForLogin()
         self.getInfo("startCapturePackets",params={"interface":interface,"size":size})
         print("Packet Capture Started.")
         input("Press Enter To Stop Capturing Packets...")
@@ -264,8 +273,6 @@ def main():
     # pprint(connection.getInfo("getWanStatus"))
     # pprint(connection.getInfo("setReboot"))
     # pprint(connection.getInfo("getLanStatus",params={"wanType":""}))
-    
-    print("Logging Out...")
     connection.logout()
 
     
