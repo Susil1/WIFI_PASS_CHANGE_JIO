@@ -58,13 +58,35 @@ class Payload:
 class routerConnection:
     def __init__(self,login_data):
         self.login_data=login_data
-    def initialise_connection(self):
+    def request(self,method:str,params={}):
         HEADERS = {"Cookie": f"cSupport=1;"}
-        
-        login_payload = Payload(
-            method = "login",
-            params = self.login_data,
+
+        payload = Payload(
+            method = method,
+            params=params
         )
+        response = requests.post(
+            URL,
+            headers=HEADERS,
+            json=payload.json(),
+            verify=False,  # router uses self-signed cert
+            timeout=10
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def initialise_connection(self,params=None):
+        HEADERS = {"Cookie": f"cSupport=1;"}
+        if not params:
+            login_payload = Payload(
+                method = "login",
+                params = self.login_data,
+            )
+        else:
+            login_payload = Payload(
+                method = "login",
+                params = params,
+            )
         login_response = SESSION.post(
             URL,
             headers=HEADERS,
@@ -76,7 +98,16 @@ class routerConnection:
             raise ConnectionError("Login request failed")
 
         result = login_response.json()
-
+        if (result["code"] == "ERR_LOGIN_ACCOUNT_LOCKED"):
+            raise Exception("Too Many Wrong Attempts")
+        if (result["code"]=="ERR_LOGIN_CREDENTIALS_FAIL"):
+            default_login_data = {
+                "username": "admin",
+                "password": "Jiocentrum"
+            }
+            print("Entering default credentials...")
+            return self.initialise_connection(params=default_login_data)
+            
         if "results" not in result:
             raise ValueError("Unexpected login response")
         
@@ -114,12 +145,12 @@ class routerConnection:
             timeout=10
         )
         if (post_login_response.json()["code"] == "ERR_POSTLOGIN_FACTORY_RESET"):
-            default_pass = self.login_data["password"]
+            password = self.login_data["password"]
             params = {
-                "adminPassword": default_pass,
-                "guestPassword": default_pass,
-                "confirmAdminPassword": default_pass,
-                "confirmGuestPassword": default_pass
+                "adminPassword": password,
+                "guestPassword": password,
+                "confirmAdminPassword": password,
+                "confirmGuestPassword": password
                 }
             self.getInfo("setFactoryReset",params=params)
             return self.initialise_connection()
@@ -212,12 +243,14 @@ def main():
     with open(CREDENTIAL_PATH) as json_file:
         login_data = json.load(json_file)
     connection=routerConnection(login_data)
+    # pprint(connection.request("preLogin"))
     status=connection.initialise_connection()
     if (status=="OK"):
         print("Logged in successfully.")
     # newpass= getNewPassword()
     # connection.changePassword(newpass)
     # connection.capture_packet(interface="any",size=5)
+    # pprint(connection.getInfo("setFactoryDefaults"))
     # pprint(connection.getInfo("getLanClients"))
     # pprint(connection.getInfo("getMemoryUtilisation"))
     # pprint(connection.getInfo("getSystemStatus"))
