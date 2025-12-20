@@ -1,8 +1,8 @@
 import configparser
 import json
 
-from utils.paths import CONFIG_FILE,CREDENTIAL_PATH,BASE_PATH
-
+from utils.paths import CONFIG_FILE,CREDENTIAL_PATH,BASE_PATH,LOGGER_PATH
+from utils.utility import LogConsole
 config = configparser.ConfigParser()
 
 # Configure IP address
@@ -26,3 +26,5 @@ def updateRouterPassword(newpassword):
 def downloadPacket(file_name,content):
     with open(file_name, "wb") as f:
         f.write(content)
+
+logger = LogConsole(LOGGER_PATH)

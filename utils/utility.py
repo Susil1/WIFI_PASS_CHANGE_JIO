@@ -1,5 +1,6 @@
 import secrets
 import string
+import logging
 from typing import Any
 from dataclasses import dataclass,field
 
@@ -70,4 +71,19 @@ def print_response(data:Response)->None:
         print_results(results)
     print(GREEN,"-"*80,RESET)
         
-            
+class LogConsole:
+    def __init__(self,logger_file):
+        self.log_file_path = logger_file
+        self.file_log = self._get_file_logger()
+    def _get_file_logger(self):
+        file_logger = logging.getLogger("file")
+        file_logger.setLevel(logging.INFO)
+        fh = logging.FileHandler(self.log_file_path)
+        fh.setFormatter(logging.Formatter("[%(asctime)s] - %(message)s", "%I:%M:%S %p")) 
+        file_logger.addHandler(fh)
+        return file_logger
+    def log(self, msg: str,err=False):
+        if err:
+            self.file_log.error(msg)
+        else:
+            self.file_log.info(msg)
