@@ -1,13 +1,29 @@
-# Capture files
+# ===============================
+# Packet capture files
+# ===============================
 *.pcap
+*.pcapng
 
-*.vscode
-# Sensitive config files
+# ===============================
+# IDE / Editor files
+# ===============================
+.vscode/
+
+# ===============================
+# Sensitive config & secrets
+# ===============================
 config.ini
 credentials.json
 newpass.txt
 
-# Test / local scripts
-test.py
+# ===============================
+# Python cache / artifacts
+# ===============================
+__pycache__/
+*.pyc
+*.pyo
 
-#folder
+# ===============================
+# Local test scripts
+# ===============================
+test.py
