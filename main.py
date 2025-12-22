@@ -1,16 +1,18 @@
-from utils.utility import print_response,logging
+from utils.utility import print_response
 from utils.colors import RED,RESET
 
-from router.file_handler import getLoginData
+from router.file_handler import getLoginData,logger
 from router.connection import routerConnection
 
 def main():
     print("Logging In...")
+    logger.log("Logging in")
     login_data = getLoginData()
     connection=routerConnection(login_data)
-    # pprint(connection.getInfo("preLogin",auth=False))
+    logger.log("login data fetched. initialising connection")
     status=connection.initialise_connection()
     if (status=="OK"):
+        logger.log("Logged in successfully")
         print("Logged in successfully.")
     # connection.change_admin_password()
     # newpass= getNewPassword()

@@ -79,7 +79,7 @@ class LogConsole:
         file_logger = logging.getLogger("file")
         file_logger.setLevel(logging.INFO)
         fh = logging.FileHandler(self.log_file_path)
-        fh.setFormatter(logging.Formatter("[%(asctime)s] - %(message)s", "%I:%M:%S %p")) 
+        fh.setFormatter(logging.Formatter("[%(asctime)s] - %(message)s", "%d-%b-%y %I:%M:%S %p")) 
         file_logger.addHandler(fh)
         return file_logger
     def log(self, msg: str,err=False):

@@ -1,7 +1,7 @@
 import urllib3
 import requests
 
-from router.file_handler import updateLoginData,updateRouterPassword,downloadPacket
+from router.file_handler import updateLoginData,updateRouterPassword,downloadPacket,logger
 
 from utils.utility import getNewPassword,Payload,Response
 from utils.constants import URL
@@ -19,6 +19,7 @@ class routerConnection:
     
     def raiseForLogin(self):
         if (not self.__is_loggedIn):
+            logger.log("You Are Not Logged In!",err=True)
             raise Exception(f"You Are Not Logged In!")
         
     def _headers(self, auth=False):
@@ -28,6 +29,7 @@ class routerConnection:
             headers["Authorization"] = f"Bearer {self.token}"
         return headers
     def request(self,payload:Payload,handler,auth):
+        logger.log(f"getting request for '{payload.method}'")
         HEADERS = self._headers(auth)
         response = handler.post(
             URL,
@@ -37,6 +39,8 @@ class routerConnection:
             timeout=10
         )
         response.raise_for_status()
+        logger.log(f"Request completed for '{payload.method}'")
+        
         return response
 
     def initialise_connection(self,params=None,times=0):        
@@ -52,14 +56,16 @@ class routerConnection:
             )
         login_response = self.request(login_payload,handler=SESSION,auth=False)
         login_result = login_response.json()
-        
         code:str = login_result["code"]
         
         if (code == "ERR_LOGIN_ACCOUNT_LOCKED"):
+            logger.log("Too Many Wrong Attempts",err=True)
             raise Exception("Too Many Wrong Attempts")
         if (code == "ERR_LOGIN_CREDENTIALS_FAIL" and times>=1):
+            logger.log("Invalid Credentials!",err=True)
             raise Exception("Invalid Credentials!")
         if (code == "ERR_LOGIN_CREDENTIALS_FAIL"):
+            logger.log("Invalid Credentials!",err=True)
             default_login_data = {
                 "username": "admin",
                 "password": "Jiocentrum"
@@ -68,6 +74,7 @@ class routerConnection:
             return self.initialise_connection(params=default_login_data,times=times+1)
             
         if "results" not in login_result:
+            logger.log("Unexpected login response",err=True)
             raise ValueError("Unexpected login response")
         
         if_logged_in = login_result.get("forcedLogin",False)
@@ -78,9 +85,11 @@ class routerConnection:
         self.token = login_result["results"].get("token")
         
         if not self.token:
+            logger.log("Token not received from router",err=True)
             raise ValueError("Token not received from router")
         
         if (if_logged_in):
+            logger.log("Already Logged In")
             print("Already Logged In...")
             params={
                 "authHeader":f"Bearer {self.token}",
@@ -97,6 +106,7 @@ class routerConnection:
         post_login_response = self.request(post_login_payload,SESSION,auth=True).json()
         
         if (post_login_response["code"] == "ERR_POSTLOGIN_FACTORY_RESET"):
+            logger.log("Device in factory default mode.")
             password = self.login_data["password"]
             params = {
                 "adminPassword": password,
@@ -112,15 +122,18 @@ class routerConnection:
                 
     def logout(self):
         self.raiseForLogin()
+        logger.log("Logging Out")
         print("Logging Out...")
 
         logout_payload = Payload(
             method = "logout"
         )
         
-        logout_response = self.request(logout_payload,SESSION,auth=True)
-        
-        return logout_response.json().get("status","NOT_OK")
+        logout_response = self.request(logout_payload,SESSION,auth=True).json()
+        status = logout_response.get("status","NOT_OK")
+        if (status == "OK"):
+            logger.log("Logout successfully")
+        return status
     
     def getInfo(self,method="",params={},info_payload=None,auth=True)->Response:
         self.raiseForLogin()
@@ -145,6 +158,7 @@ class routerConnection:
         
         wireless_config=self.getInfo("getWirelessConfiguration")
         if (wireless_config.status != "OK"):
+            logger.log("Error Getting WirelessConfiguration",err=True)
             raise ConnectionError("Error Getting WirelessConfiguration!")
         
         results = wireless_config.results
@@ -163,6 +177,7 @@ class routerConnection:
         )
         passchange_response = self.getInfo(info_payload=passchange_payload)
         if (passchange_response.status=="OK"):
+            logger.log("wifi password changed successfully")
             print("Password Successfully Changed")
             updateRouterPassword(newpass)
             print(f"New Password: {newpass}")
@@ -193,6 +208,7 @@ class routerConnection:
                     "username": "admin",
                     "password": password
                 }
+            logger.log("Admin password changed successfully")
             updateLoginData(data)
             
     def __download_data(self,file_name):
