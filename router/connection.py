@@ -19,7 +19,6 @@ class routerConnection:
     
     def raiseForLogin(self):
         if (not self.__is_loggedIn):
-            logger.log("You Are Not Logged In!",err=True)
             raise Exception(f"You Are Not Logged In!")
         
     def _headers(self, auth=False):
@@ -59,10 +58,8 @@ class routerConnection:
         code:str = login_result["code"]
         
         if (code == "ERR_LOGIN_ACCOUNT_LOCKED"):
-            logger.log("Too Many Wrong Attempts",err=True)
             raise Exception("Too Many Wrong Attempts")
         if (code == "ERR_LOGIN_CREDENTIALS_FAIL" and times>=1):
-            logger.log("Invalid Credentials!",err=True)
             raise Exception("Invalid Credentials!")
         if (code == "ERR_LOGIN_CREDENTIALS_FAIL"):
             logger.log("Invalid Credentials!",err=True)
@@ -70,11 +67,10 @@ class routerConnection:
                 "username": "admin",
                 "password": "Jiocentrum"
             }
-            print("Entering default credentials...")
+            logger.log("Entering default credentials...")
             return self.initialise_connection(params=default_login_data,times=times+1)
             
         if "results" not in login_result:
-            logger.log("Unexpected login response",err=True)
             raise ValueError("Unexpected login response")
         
         if_logged_in = login_result.get("forcedLogin",False)
@@ -85,12 +81,10 @@ class routerConnection:
         self.token = login_result["results"].get("token")
         
         if not self.token:
-            logger.log("Token not received from router",err=True)
             raise ValueError("Token not received from router")
         
         if (if_logged_in):
             logger.log("Already Logged In")
-            print("Already Logged In...")
             params={
                 "authHeader":f"Bearer {self.token}",
                 "loggedId":loggedId
@@ -114,7 +108,7 @@ class routerConnection:
                 "confirmAdminPassword": password,
                 "confirmGuestPassword": password
                 }
-            self.getInfo("setFactoryReset",params=params)
+            self.getInfo("setFactoryReset",params=params,errorForNotLogin=False)
             return self.initialise_connection()
 
         self.__is_loggedIn=True
@@ -123,8 +117,6 @@ class routerConnection:
     def logout(self):
         self.raiseForLogin()
         logger.log("Logging Out")
-        print("Logging Out...")
-
         logout_payload = Payload(
             method = "logout"
         )
@@ -135,8 +127,8 @@ class routerConnection:
             logger.log("Logout successfully")
         return status
     
-    def getInfo(self,method="",params={},info_payload=None,auth=True)->Response:
-        self.raiseForLogin()
+    def getInfo(self,method="",params={},info_payload=None,auth=True,errorForNotLogin = True)->Response:
+        self.raiseForLogin() if errorForNotLogin else None
         
         if (not info_payload):
             info_payload = Payload(
@@ -158,7 +150,6 @@ class routerConnection:
         
         wireless_config=self.getInfo("getWirelessConfiguration")
         if (wireless_config.status != "OK"):
-            logger.log("Error Getting WirelessConfiguration",err=True)
             raise ConnectionError("Error Getting WirelessConfiguration!")
         
         results = wireless_config.results
@@ -177,18 +168,15 @@ class routerConnection:
         )
         passchange_response = self.getInfo(info_payload=passchange_payload)
         if (passchange_response.status=="OK"):
-            logger.log("wifi password changed successfully")
-            print("Password Successfully Changed")
+            logger.log(f"wifi password changed successfully pass: {newpass}")
             updateRouterPassword(newpass)
-            print(f"New Password: {newpass}")
 
-    def change_admin_password(self):
+    def change_admin_password(self,password):
         self.raiseForLogin()
-        password = input("Enter New Password for ADMIN: ")
         users = self.getInfo("getUsers")
         result = users.results
         if (result):
-            print(f"Changing Admin Password to '{password}'")
+            logger.log(f"Changing Admin Password to '{password}'")
             
             admin = result[0] if result[0]["username"]=="admin" else result[1]
             recordId = admin["recordId"]
@@ -202,15 +190,20 @@ class routerConnection:
             result = self.getInfo("changeUserPassword",params=params)
             
             if (result.status == "ERROR"):
-                print("Enter A Valid Password!")
-                return self.change_admin_password()
+                return result
             data = {
                     "username": "admin",
                     "password": password
                 }
             logger.log("Admin password changed successfully")
             updateLoginData(data)
-            
+            return result
+        return Response(
+            code="404",
+            message="error getting results",
+            status="ERROR",
+            results=[]
+        )
     def __download_data(self,file_name):
         self.raiseForLogin()
         
@@ -222,12 +215,12 @@ class routerConnection:
         response = self.request(payload,requests,auth=True)
         
         downloadPacket(file_name,content=response.content)
-        print(f"Packet capture saved as {file_name}")
+        logger.log(f"Packet capture saved as {file_name}")
         
     def capture_packet(self,interface,size,file_name="capture.pcap"):
         self.raiseForLogin()
         self.getInfo("startCapturePackets",params={"interface":interface,"size":size})
-        print("Packet Capture Started.")
+        logger.log("Packet Capture Started.")
         input("Press Enter To Stop Capturing Packets...")
         self.getInfo("stopCapturePackets")
         self.__download_data(file_name)

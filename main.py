@@ -5,7 +5,6 @@ from router.file_handler import getLoginData,logger
 from router.connection import routerConnection
 
 def main():
-    print("Logging In...")
     logger.log("Logging in")
     login_data = getLoginData()
     connection=routerConnection(login_data)
@@ -13,13 +12,12 @@ def main():
     status=connection.initialise_connection()
     if (status=="OK"):
         logger.log("Logged in successfully")
-        print("Logged in successfully.")
-    # connection.change_admin_password()
+    # print_response(connection.change_admin_password(password="1"))
     # newpass= getNewPassword()
     
     # connection.changePassword(newpass)
-    # pprint(connection.getInfo("setFactoryDefaults"))
-    # pprint(connection.getInfo("setReboot"))
+    # print_response(connection.getInfo("setFactoryDefaults"))
+    # print_response(connection.getInfo("setReboot"))
     
     # connection.capture_packet(interface="any",size=5)
     
@@ -42,4 +40,4 @@ if (__name__=="__main__"):
     try:
         main()
     except Exception as e:
-        print(f"{RED}Error: {RESET}{e}")
+        logger.log(f"{e}",err=True)

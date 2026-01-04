@@ -4,7 +4,7 @@ import logging
 from typing import Any
 from dataclasses import dataclass,field
 
-from .colors import RESET,BLUE,GREEN,YELLOW
+from .colors import RESET,BLUE,GREEN,YELLOW,RED
 
 def getNewPassword():
     myNames = ["susil","sumit","situ"]
@@ -75,15 +75,25 @@ class LogConsole:
     def __init__(self,logger_file):
         self.log_file_path = logger_file
         self.file_log = self._get_file_logger()
+        self.console_log = self._get_console_logger()
     def _get_file_logger(self):
         file_logger = logging.getLogger("file")
         file_logger.setLevel(logging.INFO)
         fh = logging.FileHandler(self.log_file_path)
-        fh.setFormatter(logging.Formatter("[%(asctime)s] - %(message)s", "%d-%b-%y %I:%M:%S %p")) 
+        fh.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] - %(message)s", "%d-%b-%y %I:%M:%S %p")) 
         file_logger.addHandler(fh)
         return file_logger
+    def _get_console_logger(self):
+        console_logger = logging.getLogger("console")
+        console_logger.setLevel(logging.INFO)
+        ch = logging.StreamHandler()
+        ch.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] - %(message)s", "%I:%M:%S %p")) 
+        console_logger.addHandler(ch)
+        return console_logger
     def log(self, msg: str,err=False):
         if err:
             self.file_log.error(msg)
+            self.console_log.error(f"{RED}{msg}{RESET}")
         else:
             self.file_log.info(msg)
+            self.console_log.info(f"{GREEN}{msg}{RESET}")
