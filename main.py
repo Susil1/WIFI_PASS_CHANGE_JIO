@@ -1,6 +1,4 @@
 from utils.utility import print_response
-from utils.colors import RED,RESET
-
 from router.file_handler import getLoginData,logger
 from router.connection import routerConnection
 
