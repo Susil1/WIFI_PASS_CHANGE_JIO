@@ -12,7 +12,7 @@
 # ===============================
 # Sensitive config & secrets
 # ===============================
-config.ini
+.ini
 credentials.json
 newpass.txt
 
