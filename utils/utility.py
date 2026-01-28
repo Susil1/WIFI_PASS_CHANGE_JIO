@@ -1,7 +1,9 @@
 import secrets
 import string
 import logging
+import os
 from typing import Any
+from pathlib import Path
 from dataclasses import dataclass,field
 
 from .colors import RESET,BLUE,GREEN,YELLOW,RED
@@ -39,7 +41,51 @@ class Response:
     message:str
     status:str
     results:Any
+@dataclass
+class UserData:
+    user_id:int
+    username:str
+    first_name:str
+    role:str
+    joined_date:str
+        
+    def toDict(self):
+        user_data:dict = {
+            "user_id":self.user_id,
+            "username":self.username,
+            "first_name":self.first_name,
+            "role":self.role,
+            "joined_date":self.joined_date
+        } 
+        return user_data
+@dataclass
+class UserInfo:
+    user_id:int
+    username:str = ""
+    first_name:str = ""
+    role:str = ""
+    expiry_date:str = ""
+    commands_remaining:int = 0
+    status:bool = False
+    joined_date:str = ""
+@dataclass
+class Command:
+    user_id:int
+    expiry_date:str
+    commands_remaining:int
+    last_used:str
+    used_commands:dict = field(default_factory=dict)
 
+    def toDict(self):
+        command_data:dict = {
+            "user_id":self.user_id,
+            "expiry_date":self.expiry_date,
+            "commands_remaining":self.commands_remaining,
+            "used_commands":self.used_commands,
+            "last_used":self.last_used
+
+        } 
+        return command_data
 def print_results(data:Any,tabs=1)->None:
     if (isinstance(data,list)):
         for res in data:
@@ -70,30 +116,53 @@ def print_response(data:Response)->None:
         print(f"{BLUE}Results: {RESET}")
         print_results(results)
     print(GREEN,"-"*80,RESET)
-        
+
+class RealTimeFileHandler(logging.FileHandler):
+    def emit(self, record):
+        super().emit(record)
+        self.stream.flush()
+        os.fsync(self.stream.fileno())
 class LogConsole:
-    def __init__(self,logger_file):
-        self.log_file_path = logger_file
-        self.file_log = self._get_file_logger()
-        self.console_log = self._get_console_logger()
-    def _get_file_logger(self):
-        file_logger = logging.getLogger("file")
-        file_logger.setLevel(logging.INFO)
-        fh = logging.FileHandler(self.log_file_path)
-        fh.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] - %(message)s", "%d-%b-%y %I:%M:%S %p")) 
-        file_logger.addHandler(fh)
-        return file_logger
+    def __init__(self, logger_file: Path, console=True):
+        self.console = console
+        self.file_logger = self._get_file_logger(logger_file)
+        self.console_logger = self._get_console_logger()
+
+    def _get_file_logger(self, logger_file: Path):
+        logger_name = f"file_{logger_file.resolve()}"
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.INFO)
+
+        if not logger.handlers:
+            fh = RealTimeFileHandler(logger_file)
+            fh.setFormatter(logging.Formatter(
+                "[%(asctime)s] [%(levelname)s] - %(message)s",
+                "%d-%b-%y %I:%M:%S %p"
+            ))
+            logger.addHandler(fh)
+
+        return logger
+
     def _get_console_logger(self):
-        console_logger = logging.getLogger("console")
-        console_logger.setLevel(logging.INFO)
-        ch = logging.StreamHandler()
-        ch.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] - %(message)s", "%I:%M:%S %p")) 
-        console_logger.addHandler(ch)
-        return console_logger
-    def log(self, msg: str,err=False):
+        logger = logging.getLogger("console")
+        logger.setLevel(logging.INFO)
+
+        if not logger.handlers:
+            ch = logging.StreamHandler()
+            ch.setFormatter(logging.Formatter(
+                "[%(asctime)s] [%(levelname)s] - %(message)s",
+                "%I:%M:%S %p"
+            ))
+            logger.addHandler(ch)
+
+        return logger
+
+    def log(self, msg: str, err=False):
         if err:
-            self.file_log.error(msg)
-            self.console_log.error(f"{RED}{msg}{RESET}")
+            self.file_logger.error(msg)
+            if self.console:
+                self.console_logger.error(f"{RED}{msg}{RESET}")
         else:
-            self.file_log.info(msg)
-            self.console_log.info(f"{GREEN}{msg}{RESET}")
+            self.file_logger.info(msg)
+            if self.console:
+                self.console_logger.info(f"{GREEN}{msg}{RESET}")      

@@ -1,0 +1,32 @@
+COMMANDS_WITH_DESC:
+  - name: change_pass
+    description: Change router password
+    params:
+      password: "NEW_PASSWORD"
+
+  - name: get_lan_clients
+    description: Fetch connected LAN clients
+
+  - name: get_memory_usage
+    description: Get memory usage status
+
+  - name: get_wireless_config
+    description: Get wireless configuration
+
+  - name: get_system_status
+    description: Get router system status
+
+  - name: get_user_profile
+    description: Get user profile i.e details
+
+  - name: delete_profile
+    description: Delete your authorised user account
+
+COMMANDS:
+  - change_pass
+  - get_memory_usage
+  - get_lan_clients
+  - get_wireless_config
+  - get_system_status
+  - get_user_profile
+  - delete_profile

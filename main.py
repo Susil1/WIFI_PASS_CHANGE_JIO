@@ -1,6 +1,10 @@
-from utils.utility import print_response
-from router.file_handler import getLoginData,logger
+from utils.utility import print_response,getNewPassword,LogConsole
+from utils.paths import MAIN_LOGGER_PATH
+
+from router.file_handler import getLoginData
 from router.connection import routerConnection
+
+logger = LogConsole(MAIN_LOGGER_PATH)
 
 def main():
     logger.log("Logging in")
@@ -11,7 +15,7 @@ def main():
     if (status=="OK"):
         logger.log("Logged in successfully")
     # print_response(connection.change_admin_password(password="1"))
-    # newpass= getNewPassword()
+    # newpass = getNewPassword()
     
     # connection.changePassword(newpass)
     # print_response(connection.getInfo("setFactoryDefaults"))
@@ -26,14 +30,13 @@ def main():
     # print_response(connection.getInfo("getCpuUtilisation"))
     # print_response(connection.getInfo("getApplicationsStatus"))
     # print_response(connection.getInfo("getSystemInformation"))
-    # print_response(connection.getInfo("getApplicationsStatus"))
     # print_response(connection.getInfo("getSystemDateTime"))
     # print_response(connection.getInfo("getWirelessConfiguration"))
     # print_response(connection.getInfo("getWanStatus"))
     # print_response(connection.getInfo("getLanStatus",params={"wanType":""}))
     connection.logout()
+    logger.log("Logout successfully")
 
-    
 if (__name__=="__main__"):
     try:
         main()

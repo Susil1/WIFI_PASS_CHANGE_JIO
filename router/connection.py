@@ -1,11 +1,11 @@
 import urllib3
 import requests
 
-from router.file_handler import updateLoginData,updateRouterPassword,downloadPacket,logger
+from router.file_handler import updateLoginData,updateRouterPassword,downloadPacket
 
-from utils.utility import getNewPassword,Payload,Response
+from utils.utility import getNewPassword,Payload,Response,LogConsole
 from utils.constants import URL
-
+from utils.paths import LOGGER_PATH
 # Disable the warning
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -13,9 +13,10 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 SESSION = requests.Session()
 
 class routerConnection:
-    def __init__(self,login_data):
+    def __init__(self,login_data,console_log = True):
         self.login_data = login_data
         self.__is_loggedIn = False
+        self.logger = LogConsole(logger_file=LOGGER_PATH,console=console_log)
     
     def raiseForLogin(self):
         if (not self.__is_loggedIn):
@@ -28,7 +29,7 @@ class routerConnection:
             headers["Authorization"] = f"Bearer {self.token}"
         return headers
     def request(self,payload:Payload,handler,auth):
-        logger.log(f"getting request for '{payload.method}'")
+        self.logger.log(f"getting request for '{payload.method}'")
         HEADERS = self._headers(auth)
         response = handler.post(
             URL,
@@ -38,7 +39,7 @@ class routerConnection:
             timeout=10
         )
         response.raise_for_status()
-        logger.log(f"Request completed for '{payload.method}'")
+        self.logger.log(f"Request completed for '{payload.method}'")
         
         return response
 
@@ -62,12 +63,12 @@ class routerConnection:
         if (code == "ERR_LOGIN_CREDENTIALS_FAIL" and times>=1):
             raise Exception("Invalid Credentials!")
         if (code == "ERR_LOGIN_CREDENTIALS_FAIL"):
-            logger.log("Invalid Credentials!",err=True)
+            self.logger.log("Invalid Credentials!",err=True)
             default_login_data = {
                 "username": "admin",
                 "password": "Jiocentrum"
             }
-            logger.log("Entering default credentials...")
+            self.logger.log("Entering default credentials...")
             return self.initialise_connection(params=default_login_data,times=times+1)
             
         if "results" not in login_result:
@@ -84,7 +85,7 @@ class routerConnection:
             raise ValueError("Token not received from router")
         
         if (if_logged_in):
-            logger.log("Already Logged In")
+            self.logger.log("Already Logged In")
             params={
                 "authHeader":f"Bearer {self.token}",
                 "loggedId":loggedId
@@ -100,7 +101,7 @@ class routerConnection:
         post_login_response = self.request(post_login_payload,SESSION,auth=True).json()
         
         if (post_login_response["code"] == "ERR_POSTLOGIN_FACTORY_RESET"):
-            logger.log("Device in factory default mode.")
+            self.logger.log("Device in factory default mode.")
             password = self.login_data["password"]
             params = {
                 "adminPassword": password,
@@ -113,10 +114,14 @@ class routerConnection:
 
         self.__is_loggedIn=True
         return post_login_response.get("status","NOT_OK")
-                
+    def reconnect(self):
+        session_status:Response = self.getInfo("getSessionStatus")
+        if not (session_status.code == "OK_SESSION_LOGGGED"):
+            self.initialise_connection()
+            
     def logout(self):
         self.raiseForLogin()
-        logger.log("Logging Out")
+        self.logger.log("Logging Out")
         logout_payload = Payload(
             method = "logout"
         )
@@ -124,7 +129,7 @@ class routerConnection:
         logout_response = self.request(logout_payload,SESSION,auth=True).json()
         status = logout_response.get("status","NOT_OK")
         if (status == "OK"):
-            logger.log("Logout successfully")
+            self.logger.log("Logout successfully")
         return status
     
     def getInfo(self,method="",params={},info_payload=None,auth=True,errorForNotLogin = True)->Response:
@@ -150,7 +155,7 @@ class routerConnection:
         
         wireless_config=self.getInfo("getWirelessConfiguration")
         if (wireless_config.status != "OK"):
-            raise ConnectionError("Error Getting WirelessConfiguration!")
+            return wireless_config.status
         
         results = wireless_config.results
         ssid = results["ssid"]
@@ -168,15 +173,15 @@ class routerConnection:
         )
         passchange_response = self.getInfo(info_payload=passchange_payload)
         if (passchange_response.status=="OK"):
-            logger.log(f"wifi password changed successfully pass: {newpass}")
+            self.logger.log(f"wifi password changed successfully pass: {newpass}")
             updateRouterPassword(newpass)
-
+        return passchange_response.status
     def change_admin_password(self,password):
         self.raiseForLogin()
         users = self.getInfo("getUsers")
         result = users.results
         if (result):
-            logger.log(f"Changing Admin Password to '{password}'")
+            self.logger.log(f"Changing Admin Password to '{password}'")
             
             admin = result[0] if result[0]["username"]=="admin" else result[1]
             recordId = admin["recordId"]
@@ -195,7 +200,7 @@ class routerConnection:
                     "username": "admin",
                     "password": password
                 }
-            logger.log("Admin password changed successfully")
+            self.logger.log("Admin password changed successfully")
             updateLoginData(data)
             return result
         return Response(
@@ -215,12 +220,12 @@ class routerConnection:
         response = self.request(payload,requests,auth=True)
         
         downloadPacket(file_name,content=response.content)
-        logger.log(f"Packet capture saved as {file_name}")
+        self.logger.log(f"Packet capture saved as {file_name}")
         
     def capture_packet(self,interface,size,file_name="capture.pcap"):
         self.raiseForLogin()
         self.getInfo("startCapturePackets",params={"interface":interface,"size":size})
-        logger.log("Packet Capture Started.")
+        self.logger.log("Packet Capture Started.")
         input("Press Enter To Stop Capturing Packets...")
         self.getInfo("stopCapturePackets")
         self.__download_data(file_name)
