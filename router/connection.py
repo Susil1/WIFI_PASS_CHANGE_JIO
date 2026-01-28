@@ -13,10 +13,10 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 SESSION = requests.Session()
 
 class routerConnection:
-    def __init__(self,login_data,console_log = True):
+    def __init__(self,login_data,console_log = True, logger_file=LOGGER_PATH):
         self.login_data = login_data
         self.__is_loggedIn = False
-        self.logger = LogConsole(logger_file=LOGGER_PATH,console=console_log)
+        self.logger = LogConsole(logger_file=logger_file,console=console_log)
     
     def raiseForLogin(self):
         if (not self.__is_loggedIn):
@@ -132,13 +132,13 @@ class routerConnection:
             self.logger.log("Logout successfully")
         return status
     
-    def getInfo(self,method="",params={},info_payload=None,auth=True,errorForNotLogin = True)->Response:
+    def getInfo(self,method="",params=None,info_payload=None,auth=True,errorForNotLogin = True)->Response:
         self.raiseForLogin() if errorForNotLogin else None
         
         if (not info_payload):
             info_payload = Payload(
                 method = method,
-                params = params,
+                params = params or {},
             )
 
         info_response = self.request(info_payload,requests,auth=auth)

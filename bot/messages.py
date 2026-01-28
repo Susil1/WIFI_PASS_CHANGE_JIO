@@ -3,8 +3,10 @@ from datetime import datetime
 from aiogram.types import Message,InlineKeyboardMarkup,InlineKeyboardButton,CallbackQuery
 from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
+import asyncio
 
 from router.connection import routerConnection
+from .utility import BOT_LOGGER
 
 def delete_confirm_kb():
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -32,13 +34,17 @@ async def change_pass_handler(message: Message,connection:routerConnection):
         await message.answer(pass_change_msg,parse_mode=ParseMode.HTML)
         return
     *_,password = args
-    status = connection.changePassword(password)
+    if message.from_user:
+        BOT_LOGGER.log(f"Changing wifi password user_id={message.from_user.id}")
+    status = await asyncio.to_thread(connection.changePassword, password)
     if (status == "OK"):
+        BOT_LOGGER.log("Wifi password changed successfully")
         await message.answer(
             "✅ <b>Password Changed Successfully!</b>",
             parse_mode=ParseMode.HTML
         )
     else:
+        BOT_LOGGER.log(f"Wifi password change failed status={status}", err=True)
         await message.answer(
             wrong_password_msg,
             parse_mode=ParseMode.HTML
@@ -54,8 +60,8 @@ async def lan_clients_handler(message:Message,time_str,results):
            f"<b>Scan Time:</b>\n{time_str}\n\n"
            "<pre>")
     for res in results:
-        msg += ( f"Host Name : {res["hostName"]}\n"
-                f"IPv4      : {res["ipv4Address"]}\n"
+        msg += ( f"Host Name : {res['hostName']}\n"
+            f"IPv4      : {res['ipv4Address']}\n"
                 "----------------------------\n")
     msg += "</pre>"
     await message.answer(
@@ -101,8 +107,8 @@ async def show_less(callback: CallbackQuery,state:FSMContext):
            f"<b>Scan Time:</b>\n{time_str}\n\n"
            "<pre>")
     for res in results_list:
-        msg += ( f"Host Name : {res["hostName"]}\n"
-                f"IPv4      : {res["ipv4Address"]}\n"
+        msg += ( f"Host Name : {res['hostName']}\n"
+            f"IPv4      : {res['ipv4Address']}\n"
                 "----------------------------\n")
     msg += "</pre>"
     
@@ -148,10 +154,10 @@ async def show_more(callback: CallbackQuery,state:FSMContext):
            f"<b>Scan Time:</b>\n{time_str}\n\n"
            "<pre>")
     for res in results_list:
-        msg += ( f"Host Name : {res["hostName"]}\n"
-                f"IPv4      : {res["ipv4Address"]}\n"
-                f"IPv6      : {res["ipv6Address"]}\n"
-                f"MAC       : {res["macAddress"]}\n"
+        msg += ( f"Host Name : {res['hostName']}\n"
+            f"IPv4      : {res['ipv4Address']}\n"
+            f"IPv6      : {res['ipv6Address']}\n"
+            f"MAC       : {res['macAddress']}\n"
                 "----------------------------\n")
     msg += "</pre>"
     await callback.message.edit_text(

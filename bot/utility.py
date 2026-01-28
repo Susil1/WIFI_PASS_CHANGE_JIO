@@ -3,6 +3,8 @@ from datetime import datetime
 from typing import Callable, Awaitable
 
 from utils.constants import DATE_FMT
+from utils.utility import LogConsole
+from utils.paths import BOT_LOGGER_PATH
 
 from router.connection import routerConnection
 from router.file_handler import getLoginData
@@ -10,8 +12,9 @@ from router.file_handler import getLoginData
 from db.connection import DB_Connection
 
 LOGIN_DATA = getLoginData()
-CONNECTION = routerConnection(LOGIN_DATA,console_log=False)
+CONNECTION = routerConnection(LOGIN_DATA,console_log=False, logger_file=BOT_LOGGER_PATH)
 DB:DB_Connection = DB_Connection()
+BOT_LOGGER = LogConsole(BOT_LOGGER_PATH, console=True)
 
 async def periodic_task(
     func: Callable[[], Awaitable[None]],
@@ -24,7 +27,7 @@ async def periodic_task(
         try:
             await func(*args)
         except Exception as e:
-            print("Error", e)
+            BOT_LOGGER.log(f"Periodic task error: {e}", err=True)
         await asyncio.sleep(interval)
         
 async def reconnect(router_connection:routerConnection):

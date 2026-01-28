@@ -3,6 +3,8 @@ from aiogram.filters import Command
 from aiogram.types import Message,CallbackQuery
 from aiogram.fsm.context import FSMContext
 
+import asyncio
+
 from datetime import datetime
 
 from ..middleware.auth import AuthMiddleware
@@ -15,6 +17,7 @@ from ..messages import (change_pass_handler,
                         system_status_handler
                     )
 from ..utility import CONNECTION
+from ..utility import BOT_LOGGER
 
 command_route = Router()
 command_route.message.middleware(AuthMiddleware())
@@ -22,12 +25,17 @@ command_route.callback_query.middleware(AuthMiddleware())
 
 @command_route.message(Command("change_pass"))
 async def pass_change(message: Message):
+    if message.from_user:
+        BOT_LOGGER.log(f"/change_pass user_id={message.from_user.id}")
     await change_pass_handler(message,CONNECTION)
 
 
 @command_route.message(Command("get_lan_clients"))
 async def lan_clients(message: Message,state:FSMContext):
-    results:list = CONNECTION.getInfo("getLanClients").results
+    if message.from_user:
+        BOT_LOGGER.log(f"/get_lan_clients user_id={message.from_user.id}")
+    response = await asyncio.to_thread(CONNECTION.getInfo, "getLanClients")
+    results:list = response.results
     time_str = datetime.now().strftime("🕒 %r\n📅 %d-%b-%G (%A)")
     await state.update_data(lan_results=results)
     await state.update_data(time_str=time_str)
@@ -43,7 +51,9 @@ async def show_more_details(callback: CallbackQuery,state:FSMContext):
     
 @command_route.callback_query(F.data == "rescan")
 async def rescan(callback: CallbackQuery,state:FSMContext):
-    results:list = CONNECTION.getInfo("getLanClients").results
+    BOT_LOGGER.log(f"rescan lan clients user_id={callback.from_user.id}")
+    response = await asyncio.to_thread(CONNECTION.getInfo, "getLanClients")
+    results:list = response.results
     time_str = datetime.now().strftime("🕒 %r\n📅 %d-%b-%G (%A)")
     await state.update_data(lan_results=results)
     await state.update_data(time_str=time_str)
@@ -54,16 +64,25 @@ async def rescan(callback: CallbackQuery,state:FSMContext):
     
 @command_route.message(Command("get_memory_usage"))
 async def memory_usage(message: Message):
-    results = CONNECTION.getInfo("getMemoryUtilisation").results
+    if message.from_user:
+        BOT_LOGGER.log(f"/get_memory_usage user_id={message.from_user.id}")
+    response = await asyncio.to_thread(CONNECTION.getInfo, "getMemoryUtilisation")
+    results = response.results
     await memory_usage_handler(message,results)
     
 @command_route.message(Command("get_wireless_config"))
 async def wireless_config(message: Message):
-    results = CONNECTION.getInfo("getWirelessConfiguration").results
+    if message.from_user:
+        BOT_LOGGER.log(f"/get_wireless_config user_id={message.from_user.id}")
+    response = await asyncio.to_thread(CONNECTION.getInfo, "getWirelessConfiguration")
+    results = response.results
     await wireless_config_handler(message,results)
     
     
 @command_route.message(Command("get_system_status"))
 async def system_status(message: Message):
-    results = CONNECTION.getInfo("getSystemStatus").results
+    if message.from_user:
+        BOT_LOGGER.log(f"/get_system_status user_id={message.from_user.id}")
+    response = await asyncio.to_thread(CONNECTION.getInfo, "getSystemStatus")
+    results = response.results
     await system_status_handler(message,results)

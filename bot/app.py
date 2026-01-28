@@ -14,7 +14,7 @@ from db.utility import authorise
 from utils.utility import UserInfo
 
 from .file_handler import getToken
-from .utility import periodic_task,getFormattedExpiryDate,reconnect,CONNECTION,DB
+from .utility import periodic_task,getFormattedExpiryDate,reconnect,CONNECTION,DB,BOT_LOGGER
 from .messages import (send_help,
                        delete_confirm_kb,
                        wrong_auth_msg,
@@ -28,9 +28,14 @@ from .handler.commands import command_route
 RECONNECT_INTERVAL_SECONDS = 15 * 60
 IP_ADDRESS = config["IP"]["ip"]
 ADMIN_URL = f"https://{IP_ADDRESS}/"
-
-CONNECTION.initialise_connection()
 TOKEN = getToken()
+
+try:
+    BOT_LOGGER.log(f"Bot starting. Router IP={IP_ADDRESS}")
+    CONNECTION.initialise_connection()
+    BOT_LOGGER.log("Router connection initialised")
+except Exception as e:
+    BOT_LOGGER.log(f"Router connection init failed: {e}", err=True)
 
 def getUserInfo(user_id:int)->UserInfo:
     data = DB.get_user_data(user_id)
@@ -58,6 +63,8 @@ dp.include_router(command_route)
 
 @dp.message(Command("authorise"))
 async def authorise_user(message: Message):
+    if message.from_user:
+        BOT_LOGGER.log(f"/authorise from user_id={message.from_user.id}")
     msg = message.text.split(maxsplit=1) if message.text else []
     if(not len(msg) == 2):
         await message.answer(
@@ -68,16 +75,19 @@ async def authorise_user(message: Message):
     key:str = msg[1]
     user_id = message.from_user.id if message.from_user else 0
     if DB.check_admin(user_id):
+        BOT_LOGGER.log(f"authorise skipped (admin) user_id={user_id}")
         await message.answer(
             admin_msg,
             parse_mode=ParseMode.HTML
         )
         return
     if DB.failed_attempts(user_id) >= 5:
+        BOT_LOGGER.log(f"authorise rate-limited user_id={user_id}")
         await message.answer("⛔ Too many attempts. Try later.")
         return
     user_info = authorise(key,message,DB)
     if user_info.status:
+        BOT_LOGGER.log(f"authorise success user_id={user_id} role={user_info.role}")
         await message.answer(
             "🎉 <b>Success!</b>\n\n"
             "Your authorisation code is valid.\n",
@@ -103,6 +113,7 @@ async def authorise_user(message: Message):
         )
         await message.answer(text,parse_mode=ParseMode.HTML)
         return
+    BOT_LOGGER.log(f"authorise failed user_id={user_id}")
     await message.answer(
         wrong_code_msg,
         parse_mode=ParseMode.HTML
@@ -111,6 +122,7 @@ async def authorise_user(message: Message):
 async def get_user_profile(message: Message):
     if not message.from_user:
         return
+    BOT_LOGGER.log(f"/get_user_profile user_id={message.from_user.id}")
     user_info:UserInfo = getUserInfo(message.from_user.id)
     if user_info.status:
         user_id = user_info.user_id
@@ -145,6 +157,7 @@ async def get_user_profile(message: Message):
 async def delete_profile(message: Message):
     if not message.from_user:
         return
+    BOT_LOGGER.log(f"/delete_profile request user_id={message.from_user.id}")
     if (not DB.get_user_data(message.from_user.id)):
         await message.answer(
             access_denied_msg,
@@ -171,6 +184,7 @@ async def delete_profile(message: Message):
 @dp.callback_query(F.data == "confirm_delete")
 async def confirm_delete(callback: CallbackQuery):
     user_id = callback.from_user.id
+    BOT_LOGGER.log(f"confirm_delete callback user_id={user_id}")
     if not DB.get_user_data(user_id):
         await callback.answer("Not authorised", show_alert=True)
         return
@@ -193,6 +207,7 @@ async def confirm_delete(callback: CallbackQuery):
         )
 @dp.callback_query(F.data == "cancel_delete")
 async def cancel_delete(callback: CallbackQuery):
+    BOT_LOGGER.log(f"cancel_delete callback user_id={callback.from_user.id}")
     if not DB.get_user_data(callback.from_user.id):
         await callback.answer("Not authorised", show_alert=True)
         return
@@ -206,10 +221,14 @@ async def cancel_delete(callback: CallbackQuery):
 
 @dp.message(Command("help"))
 async def help_cmd(message: Message):
+    if message.from_user:
+        BOT_LOGGER.log(f"/help user_id={message.from_user.id}")
     await send_help(message,ADMIN_URL)
     
 @dp.message(Command("start"))
 async def start_cmd(message: Message):
+    if message.from_user:
+        BOT_LOGGER.log(f"/start user_id={message.from_user.id}")
     await send_help(message,ADMIN_URL)
 
 
@@ -221,6 +240,7 @@ async def main():
     )
 
     try:
+        BOT_LOGGER.log("Bot polling starting")
         print("🤖 Bot started. Press Ctrl+C to stop.")
         await dp.start_polling(bot)
 
@@ -229,14 +249,21 @@ async def main():
         pass
 
     except KeyboardInterrupt:
+        BOT_LOGGER.log("Bot stopped by user (Ctrl+C)")
         print("\n🛑 Bot stopped by user (Ctrl+C)")
 
     except Exception as e:
+        BOT_LOGGER.log(f"Unexpected bot error: {e}", err=True)
         print("❌ Unexpected error:", e)
 
     finally:
-        CONNECTION.logout()
+        try:
+            CONNECTION.logout()
+        except Exception as e:
+            BOT_LOGGER.log(f"Router logout failed: {e}", err=True)
         reconnect_task.cancel()
+        BOT_LOGGER.log("Closing bot session")
         print("🔻 Closing bot session...")
         await bot.session.close()
+        BOT_LOGGER.log("Bot shutdown complete")
         print("✅ Bot shutdown complete.")

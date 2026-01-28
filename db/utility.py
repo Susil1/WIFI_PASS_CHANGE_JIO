@@ -73,7 +73,8 @@ def authorise(key: str, message: Message, DB: DB_Connection) -> UserInfo:
         base_time = max(base_time, now)
 
         delta_kwargs = {"days": days, **time_data}
-        expiry_date = (base_time + timedelta(**delta_kwargs)).strftime(DATE_FMT)
+        expiry_date_obj = base_time + timedelta(**delta_kwargs)
+        expiry_date = expiry_date_obj.strftime(DATE_FMT) if expiry_date_obj != now else ""
 
     joined_date = now.strftime("%d %b %Y, %I:%M:%S %p (%a)")
     if (prev_user_data):
