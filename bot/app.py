@@ -76,7 +76,6 @@ async def authorise_user(message: Message):
     if DB.failed_attempts(user_id) >= 5:
         await message.answer("⛔ Too many attempts. Try later.")
         return
-    
     user_info = authorise(key,message,DB)
     if user_info.status:
         await message.answer(
@@ -94,13 +93,13 @@ async def authorise_user(message: Message):
             expiry_date = getFormattedExpiryDate(expiry_date)
         
         text = user_profile_msg.format(
-            user_id,
-            username,
-            first_name,
-            joined_date,
-            role,
-            expiry_date,
-            commands_remaining
+            user_id = user_id,
+            username = username,
+            first_name = first_name,
+            joined_date = joined_date,
+            role = role,
+            expiry_date = expiry_date,
+            commands_remaining = commands_remaining
         )
         await message.answer(text,parse_mode=ParseMode.HTML)
         return
@@ -126,14 +125,14 @@ async def get_user_profile(message: Message):
             expiry_date = getFormattedExpiryDate(expiry_date)
             
         text = user_profile_msg.format(
-            user_id,
-            username,
-            first_name,
-            joined_date,
-            role,
-            expiry_date,
-            commands_remaining
-            )
+            user_id = user_id,
+            username = username,
+            first_name = first_name,
+            joined_date = joined_date,
+            role = role,
+            expiry_date = expiry_date,
+            commands_remaining = commands_remaining
+        )
 
         await message.answer(text,parse_mode=ParseMode.HTML)
         return

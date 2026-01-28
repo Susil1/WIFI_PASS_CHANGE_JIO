@@ -48,13 +48,14 @@ class DB_Connection:
         return False
     def isAuthorised(self, user_id: int) -> bool:
         query = {"user_id": user_id}
-        data = self.user_col.find_one(query)
-        if not data:
+        user_data = self.user_col.find_one(query)
+        commands_data = self.command_col.find_one(query)
+        if not user_data or not commands_data:
             return False
-        role = data["role"]
+        role = user_data["role"]
         now = datetime.now()
-        expiry_date: str = data.get("expiry_date",now.strftime(DATE_FMT))
-        commands_remaining: int = data.get("commands_remaining", 0)
+        expiry_date: str = commands_data.get("expiry_date",now.strftime(DATE_FMT))
+        commands_remaining: int = commands_data.get("commands_remaining", 0)
         if role == "admin":
             return True
         if expiry_date:
@@ -62,22 +63,30 @@ class DB_Connection:
                 date_obj = datetime.strptime(expiry_date, DATE_FMT)
             except ValueError:
                 return False
+            if date_obj > now:
+                return True
             if date_obj < now:
                 if commands_remaining:
-                    self.user_col.update_one(
+                    self.command_col.update_one(
                         query,
                         {"$inc": {"commands_remaining": -1}}
                     )
                     return True
                 return False
         if commands_remaining:
-            self.user_col.update_one(
+            self.command_col.update_one(
                 query,
                 {"$inc": {"commands_remaining": -1}}
             )
             return True
         return False
-    def failed_attempts(self, user_id: int):
+    def failed_attempts(self,user_id:int)->int:
+        query = {"user_id": user_id}
+        data = self.spam_col.find_one(query)
+        if not data:
+            return 0
+        return data.get("failed_attempts", 0)
+    def add_failed_attempts(self, user_id: int):
         query = {"user_id": user_id}
         now = datetime.now()
         data = self.spam_col.find_one(query)
@@ -87,7 +96,7 @@ class DB_Connection:
                 "failed_attempts": 1,
                 "last_failed_attempts": now.strftime(DATE_FMT)
             })
-            return 1
+            return
 
         failed_attempts = data.get("failed_attempts", 0)
         try:
@@ -111,7 +120,7 @@ class DB_Connection:
                     "last_failed_attempts": now.strftime(DATE_FMT)
                 }}
             )
-            return 1
+            return
 
         if failed_attempts < MAX_ATTEMPTS:
             self.spam_col.update_one(
@@ -119,8 +128,8 @@ class DB_Connection:
                 {"$inc": {"failed_attempts": 1},
                 "$set": {"last_failed_attempts": now.strftime(DATE_FMT)}}
             )
-            return failed_attempts + 1
-        return failed_attempts
+            return
+        
     def get_auth_data(self,code:str):
         query = { "code": code }
         res = self.code_col.find_one(query)
