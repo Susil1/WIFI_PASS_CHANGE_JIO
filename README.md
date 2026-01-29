@@ -1,122 +1,129 @@
-# 🔐 Router Automation Script (Python)
+# WiFi Pass Change (Router + Telegram Bot)
 
-A Python-based automation tool to **log in to a router via JSON-RPC**, generate **secure passwords**, fetch system information, capture packets, and safely log out — all using a persistent session.
+This repo contains two main pieces:
 
-> Built for learning, automation, and controlled network environments ⚙️
+- A Python JSON-RPC client to log in to a Jio router and automate router actions (Wi‑Fi password changes, status queries, packet capture).
+- A Telegram bot (aiogram) that exposes safe router actions via commands, with MongoDB-backed authorization (expiry / command limits).
 
----
+## What This Project Does
 
-## ✨ Features
+- Logs into the router over HTTPS JSON-RPC and keeps a session alive.
+- Reads router IP + credentials from local config files.
+- Changes Wi‑Fi password using the router's wireless configuration API.
+- Fetches router information (LAN clients, memory usage, wireless config, system status, etc.).
+- Captures packets from the router (start/stop + download `.pcap`).
+- Runs a Telegram bot that:
+  - Requires users to authorise using a one-time code stored in MongoDB.
+  - Enforces access rules (admin vs non-admin, expiry date, remaining command count).
+  - Provides commands to change Wi‑Fi password and query router status.
+  - Logs bot activity and attempts.
 
-✅ Secure router login using JSON-RPC  
-✅ Token-based authentication handling  
-✅ Cryptographically secure password generation  
-✅ Session-based requests using `requests.Session()`  
-✅ Packet capture & download (`.pcap`)  
-✅ Fetch router/system/network information  
-✅ Clean logout handling  
-✅ Modular & extensible design
+## Entry Points
 
----
+- Router automation script: [main.py](main.py)
+- Telegram bot runner: [telegram_bot.py](telegram_bot.py)
 
-## 📁 Project Structure
+## Requirements
 
+- Python 3.10+ recommended
+- A router that supports this JSON-RPC interface (this repo targets Jio router endpoints)
+- MongoDB (Atlas works) for bot authorization storage
+
+Install Python deps:
+
+```bash
+pip install -r requirements.txt
 ```
-.
-├── main.py
-├── config.ini
-├── credentials.json
-├── newpass.txt
-├── capture.pcap
-└── README.md
-```
 
----
+## Configuration
 
-## ⚙️ Configuration
+### 1) Router IP and Telegram token
 
-### `config.ini`
+Edit [config.ini](config.ini):
 
 ```ini
 [IP]
-ip = 192.168.1.1
+ip = 192.168.31.1
+
+[CRED]
+TOKEN = YOUR_TELEGRAM_BOT_TOKEN
 ```
 
-### `credentials.json`
+### 2) Router credentials
+
+Create/update [credentials.json](credentials.json):
 
 ```json
 {
-	"username": "admin",
-	"password": "your_router_password"
+  "username": "admin",
+  "password": "YOUR_ROUTER_PASSWORD"
 }
 ```
 
-⚠️ **Never commit `credentials.json` to GitHub**  
-Add it to `.gitignore`.
+### 3) MongoDB connection (Telegram bot)
 
----
+Edit [db.ini](db.ini):
 
-## 🔑 Secure Password Generator
-
-Passwords are generated using:
-
--   Random names
--   Random digits
--   Special characters
--   `secrets` module (cryptographically secure)
-
-Saved automatically to:
-
-```
-newpass.txt
+```ini
+[mongo]
+user = YOUR_DB_USER
+password = YOUR_DB_PASSWORD
+appname = YOUR_ATLAS_APPNAME
 ```
 
----
+## Running
 
-## 🚀 Usage
+### Run the router automation script
 
 ```bash
 python main.py
 ```
 
----
+Notes:
 
-## 🧪 Available API Calls
+- Most calls in [main.py](main.py) are examples (many are commented out).
+- The Wi‑Fi password change method writes the new password to [newpass.txt](newpass.txt).
 
-```python
-getLanClients
-getCpuUtilisation
-getMemoryUtilisation
-getSystemInformation
-getSystemStatus
-getSystemDateTime
-getStorageDevices
-getApplicationsStatus
-getWirelessConfiguration
-getWanStatus
-getLanStatus
+### Run the Telegram bot
+
+```bash
+python telegram_bot.py
 ```
 
----
+## Telegram Bot Commands
 
-## 📡 Packet Capture
+The bot exposes these main commands (see [bot/messages.py](bot/messages.py) and [bot/handler/commands.py](bot/handler/commands.py)):
 
-```python
-connection.capture_packet(interface="any", size=5)
-```
+- `/authorise <CODE>`: redeem a one-time code from MongoDB and become authorised
+- `/change_pass <NEW_PASSWORD>`: change router Wi‑Fi password
+- `/get_lan_clients`: list connected LAN clients (with inline "show more/less")
+- `/get_memory_usage`: memory usage bar
+- `/get_wireless_config`: SSID/security/max clients
+- `/get_system_status`: firmware/hardware/model/SSIDs/etc.
+- `/get_user_profile`: view your authorisation status
+- `/delete_profile`: delete your bot profile (with confirmation)
 
----
+## Logs & Output Files
 
-## 🛡️ Security Notice
+- Bot logs: [bot.log](bot.log)
+- Script logs: [logs.log](logs.log), [mainlogs.log](mainlogs.log)
+- Packet capture output: [capture.pcap](capture.pcap) (default name)
+- Last changed Wi‑Fi password: [newpass.txt](newpass.txt)
 
-Use this script **only on routers/networks you own or have permission to test(for JIO)**.
+## Project Structure
 
----
+- [router/README.md](router/README.md): router JSON-RPC client (login, queries, password change, packet capture)
+- [bot/README.md](bot/README.md): Telegram bot (commands, middleware, reconnect task)
+- [db/README.md](db/README.md): MongoDB storage for users/codes/limits
+- [utils/README.md](utils/README.md): shared dataclasses, logging, constants, paths
+- [ADMIN/README.md](ADMIN/README.md): placeholder Node/HTML admin folder
+- [wifi-pass-change-notifier/README.md](wifi-pass-change-notifier/README.md): git submodule folder
 
-## 👨‍💻 Author
+## Security Notes
 
-**Susilcreation_68**
+- Do not commit real secrets: router passwords, Telegram bot token, MongoDB password.
+- This project disables HTTPS certificate verification for the router (self-signed) and should only be used on networks you own or are authorised to test.
 
----
+## License
 
-⭐ If you like this project, consider giving it a star!
+See [LICENSE](LICENSE).
