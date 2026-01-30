@@ -87,7 +87,7 @@ async def authorise_user(message: Message):
         return
     user_info = authorise(key,message,DB)
     if user_info.status:
-        BOT_LOGGER.log(f"authorise success user_id={user_id} role={user_info.role}")
+        BOT_LOGGER.log(f"authorise success user_id={user_id} name={user_info.first_name} role={user_info.role}")
         await message.answer(
             "🎉 <b>Success!</b>\n\n"
             "Your authorisation code is valid.\n",
@@ -122,7 +122,7 @@ async def authorise_user(message: Message):
 async def get_user_profile(message: Message):
     if not message.from_user:
         return
-    BOT_LOGGER.log(f"/get_user_profile user_id={message.from_user.id}")
+    BOT_LOGGER.log(f"/get_user_profile user_id={message.from_user.id} name={message.from_user.first_name}")
     user_info:UserInfo = getUserInfo(message.from_user.id)
     if user_info.status:
         user_id = user_info.user_id
@@ -157,7 +157,7 @@ async def get_user_profile(message: Message):
 async def delete_profile(message: Message):
     if not message.from_user:
         return
-    BOT_LOGGER.log(f"/delete_profile request user_id={message.from_user.id}")
+    BOT_LOGGER.log(f"/delete_profile request user_id={message.from_user.id} name={message.from_user.first_name}")
     if (not DB.get_user_data(message.from_user.id)):
         await message.answer(
             access_denied_msg,
@@ -184,7 +184,7 @@ async def delete_profile(message: Message):
 @dp.callback_query(F.data == "confirm_delete")
 async def confirm_delete(callback: CallbackQuery):
     user_id = callback.from_user.id
-    BOT_LOGGER.log(f"confirm_delete callback user_id={user_id}")
+    BOT_LOGGER.log(f"confirm_delete callback user_id={user_id} name={callback.from_user.first_name}")
     if not DB.get_user_data(user_id):
         await callback.answer("Not authorised", show_alert=True)
         return
@@ -207,7 +207,7 @@ async def confirm_delete(callback: CallbackQuery):
         )
 @dp.callback_query(F.data == "cancel_delete")
 async def cancel_delete(callback: CallbackQuery):
-    BOT_LOGGER.log(f"cancel_delete callback user_id={callback.from_user.id}")
+    BOT_LOGGER.log(f"cancel_delete callback user_id={callback.from_user.id} name={callback.from_user.first_name}")
     if not DB.get_user_data(callback.from_user.id):
         await callback.answer("Not authorised", show_alert=True)
         return
@@ -222,13 +222,13 @@ async def cancel_delete(callback: CallbackQuery):
 @dp.message(Command("help"))
 async def help_cmd(message: Message):
     if message.from_user:
-        BOT_LOGGER.log(f"/help user_id={message.from_user.id}")
+        BOT_LOGGER.log(f"/help user_id={message.from_user.id} name={message.from_user.first_name}")
     await send_help(message,ADMIN_URL)
     
 @dp.message(Command("start"))
 async def start_cmd(message: Message):
     if message.from_user:
-        BOT_LOGGER.log(f"/start user_id={message.from_user.id}")
+        BOT_LOGGER.log(f"/start user_id={message.from_user.id} name={message.from_user.first_name}")
     await send_help(message,ADMIN_URL)
 
 
