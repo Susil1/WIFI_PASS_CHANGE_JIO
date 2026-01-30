@@ -8,6 +8,7 @@ import asyncio
 from datetime import datetime
 
 from ..middleware.auth import AuthMiddleware
+from ..middleware.used_commands import UsedCommands
 
 from ..messages import (change_pass_handler,
                         lan_clients_handler,
@@ -22,6 +23,7 @@ from ..utility import BOT_LOGGER
 command_route = Router()
 command_route.message.middleware(AuthMiddleware())
 command_route.callback_query.middleware(AuthMiddleware())
+command_route.message.middleware(UsedCommands())
 
 @command_route.message(Command("change_pass"))
 async def pass_change(message: Message):

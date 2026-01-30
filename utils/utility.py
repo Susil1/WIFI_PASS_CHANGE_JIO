@@ -74,7 +74,7 @@ class Command:
     expiry_date:str
     commands_remaining:int
     last_used:str
-    used_commands:dict = field(default_factory=dict)
+    used_commands:list = field(default_factory=list)
 
     def toDict(self):
         command_data:dict = {

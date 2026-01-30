@@ -2,8 +2,6 @@ from pymongo import MongoClient
 from pymongo.database import Database
 from pymongo.collection import Collection 
 
-from functools import wraps
-
 from datetime import datetime,timedelta
 
 from utils.utility import UserData,Command
@@ -150,4 +148,11 @@ class DB_Connection:
         cmd_res = self.command_col.delete_one(query)
         if user_res.deleted_count > 0 or cmd_res.deleted_count > 0:
             return True
-        return False      
+        return False   
+    
+    def update_used_commands(self,user_id:int,command:str):
+        query = { "user_id": user_id }
+        self.command_col.update_one(
+            query,
+            {"$push": {"used_commands": command}}
+        )  
